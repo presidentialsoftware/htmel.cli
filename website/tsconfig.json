@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "ES2015",
+    "lib": ["dom", "es2015"],
+    "module": "ES2015",
+    "moduleResolution": "node",
+    "jsx": "react",
+    "jsxFactory": "JSX",
+    "jsxFragmentFactory": "document.createDocumentFragment",
+    "noImplicitOverride": false,
+    "baseUrl": "./",
+    "outDir": "./public",
+    "noEmit": false,
+    "paths": {
+      "htmel": ["../node_modules/htmel/dist/script.js"]
+    }
+  }
+}

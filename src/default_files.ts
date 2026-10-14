@@ -294,10 +294,10 @@ export const packageJsonContent = (projectName: string) => `{
     "Node.js",
     "website"
   ],
-  "author": "Prince Ashton James Snow Morris Jefferson",
+  "author": "Ashton James Snow Morris Jefferson",
   "license": "MIT",
   "dependencies": {
-    "htmel": "^0.0.9"
+    "htmel": "git+https://github.com/presidentialsoftware/htmel.git#dist"
   },
   "devDependencies": {
     "glob": "^10.3.10",
