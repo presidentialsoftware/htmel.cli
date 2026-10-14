@@ -614,4 +614,193 @@ program
     }
   });
 
+program
+  .command("build:website")
+  .description("build website assets")
+  .action(async () => {
+    buildWebsite();
+
+    function buildWebsite(): boolean {
+      const projectPath = process.cwd();
+      const packagePath = path.join(projectPath, "package.json");
+
+      if (!fs.existsSync(packagePath)) {
+        console.error(
+          "No package.json found. Run this command inside an HTMEL project."
+        );
+        return false;
+      }
+
+      const packageJson = JSON.parse(
+        fs.readFileSync(packagePath, "utf8")
+      );
+
+      if (!packageJson.scripts?.build) {
+        console.error(
+          'No "build" script found in package.json.'
+        );
+        console.error(
+          'Add a build script, for example: "build": "webpack"'
+        );
+        return false;
+      }
+
+      console.log("Building HTMEL website...");
+
+      const result = spawnSync(
+        process.platform === "win32" ? "npm.cmd" : "npm",
+        ["run", "build"],
+        {
+          cwd: projectPath,
+          stdio: "inherit",
+          shell: process.platform === "win32",
+        }
+      );
+
+      if (result.error) {
+        console.error(result.error.message);
+        return false;
+      }
+
+      if (result.status !== 0) {
+        console.error(
+          `Website build failed with exit code ${result.status}`
+        );
+        return false;
+      }
+
+      console.log("Website build completed successfully.");
+      return true;
+    }
+  });
+
+program
+  .command("build:android")
+  .description("build android assets")
+  .action(async () => {
+    buildAndroid();
+
+    function buildAndroid(): boolean {
+      const androidPath = path.join(
+        process.cwd(),
+        "platforms",
+        "android"
+      );
+
+      if (!fs.existsSync(androidPath)) {
+        console.error(
+          "Android is not configured. Run htmel create android first."
+        );
+        return false;
+      }
+
+      const gradleName = process.platform === "win32"
+        ? "gradlew.bat"
+        : "gradlew";
+
+      const gradlePath = path.join(androidPath, gradleName);
+
+      if (!fs.existsSync(gradlePath)) {
+        console.error(`Gradle wrapper not found: ${gradlePath}`);
+        return false;
+      }
+
+      console.log("Building Android app...");
+
+      const result = spawnSync(
+        process.platform === "win32" ? gradlePath : "./gradlew",
+        ["assembleDebug"],
+        {
+          cwd: androidPath,
+          stdio: "inherit",
+          shell: process.platform === "win32",
+        }
+      );
+
+      if (result.error) {
+        console.error(result.error.message);
+        return false;
+      }
+
+      if (result.status !== 0) {
+        console.error(
+          `Android build failed with exit code ${result.status}`
+        );
+        return false;
+      }
+
+      console.log(
+        "Android build completed: platforms/android/app/build/outputs/apk/debug/app-debug.apk"
+      );
+
+      return true;
+    }
+  });
+
+program
+  .command("build:ios")
+  .description("build ios assets")
+  .action(async () => {
+    buildIOS();
+
+    function buildIOS(): boolean {
+      if (process.platform !== "darwin") {
+        console.error("iOS builds require macOS and Xcode.");
+        return false;
+      }
+
+      const iosPath = path.join(
+        process.cwd(),
+        "platforms",
+        "ios"
+      );
+
+      const xcodeProject = path.join(
+        iosPath,
+        "htmelMobileApp",
+        "htmelMobileApp.xcodeproj"
+      );
+
+      if (!fs.existsSync(xcodeProject)) {
+        console.error(
+          "iOS is not configured. Run htmel create ios first."
+        );
+        return false;
+      }
+
+      console.log("Building iOS app for Simulator...");
+
+      const result = spawnSync(
+        "xcodebuild",
+        [
+          "-project", xcodeProject,
+          "-scheme", "htmelMobileApp",
+          "-sdk", "iphonesimulator",
+          "-configuration", "Debug",
+          "-derivedDataPath", path.join(iosPath, "build"),
+          "build",
+        ],
+        {
+          cwd: iosPath,
+          stdio: "inherit",
+        }
+      );
+
+      if (result.error) {
+        console.error(result.error.message);
+        return false;
+      }
+
+      if (result.status !== 0) {
+        console.error(
+          `iOS build failed with exit code ${result.status}`
+        );
+        return false;
+      }
+
+      console.log("iOS build completed successfully.");
+      return true;
+    }
+  });
+
 program.parse(process.argv);
