@@ -1,0 +1,35 @@
+{
+  "name": "htmel.cli",
+  "version": "0.0.2",
+  "description": "A CLI tool for the htmel framework.",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "htmel": "./dist/index.js"
+  },
+  "scripts": {
+    "link": "bash link.sh",
+    "build": "tsc",
+    "build:link": "npm run build && npm run link",
+    "publish": "npm publish -access public"
+  },
+  "keywords": [
+    "HTML",
+    "Node.js",
+    "website"
+  ],
+  "author": "Ashton Morris",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.6",
+    "glob": "^10.3.10",
+    "typescript": "^5.2.2",
+    "webpack": "^5.90.3",
+    "webpack-cli": "^5.1.4"
+  }
+}
