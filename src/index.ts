@@ -359,4 +359,259 @@ program
     }
   });
 
+program
+  .command("run:android")
+  .description("Run android studio emulator")
+  .action(async () => {
+    runAndroid();
+
+    function runAndroid(): void {
+      const projectPath = process.cwd();
+      const androidPath = path.join(
+        projectPath,
+        "platforms",
+        "android"
+      );
+
+      if (!fs.existsSync(androidPath)) {
+        console.error(
+          "Android is not configured. Run htmel create android first."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const gradle = process.platform === "win32"
+        ? "gradlew.bat"
+        : "./gradlew";
+
+      const gradlePath = path.join(androidPath, gradle);
+
+      if (!fs.existsSync(gradlePath)) {
+        console.error(`Gradle wrapper not found: ${gradlePath}`);
+        process.exitCode = 1;
+        return;
+      }
+
+      // Determine the Android application ID.
+      const gradleFiles = [
+        path.join(androidPath, "app", "build.gradle"),
+        path.join(androidPath, "app", "build.gradle.kts"),
+      ];
+
+      let applicationId: string | undefined;
+
+      for (const file of gradleFiles) {
+        if (!fs.existsSync(file)) continue;
+
+        const content = fs.readFileSync(file, "utf8");
+        const match = content.match(
+          /applicationId\s*(?:=\s*)?["']([^"']+)["']/
+        );
+
+        if (match) {
+          applicationId = match[1];
+          break;
+        }
+      }
+
+      if (!applicationId) {
+        console.error(
+          "Could not determine applicationId from the Android Gradle configuration."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const run = (
+        command: string,
+        args: string[],
+        cwd: string
+      ): boolean => {
+        const result = spawnSync(command, args, {
+          cwd,
+          stdio: "inherit",
+          shell: process.platform === "win32",
+        });
+
+        if (result.error) {
+          console.error(result.error.message);
+          return false;
+        }
+
+        if (result.status !== 0) {
+          console.error(`${command} failed with exit code ${result.status}`);
+          return false;
+        }
+
+        return true;
+      };
+
+      console.log("Building Android app...");
+
+      const gradleCommand = process.platform === "win32"
+        ? gradlePath
+        : "./gradlew";
+
+      if (!run(gradleCommand, ["assembleDebug"], androidPath)) {
+        process.exitCode = 1;
+        return;
+      }
+
+      const apkPath = path.join(
+        androidPath,
+        "app",
+        "build",
+        "outputs",
+        "apk",
+        "debug",
+        "app-debug.apk"
+      );
+
+      if (!fs.existsSync(apkPath)) {
+        console.error(`APK not found: ${apkPath}`);
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log("Installing Android app...");
+
+      if (!run("adb", ["install", "-r", apkPath], projectPath)) {
+        console.error(
+          "Installation failed. Check that an emulator or Android device is connected."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log("Launching Android app...");
+
+      if (!run(
+        "adb",
+        ["shell", "monkey", "-p", applicationId, "1"],
+        projectPath
+      )) {
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log("Android app launched.");
+    }
+  });
+
+program
+  .command("run:ios")
+  .description("Run xcode ios emulator")
+  .action(async () => {
+    runIOS();
+
+    function runIOS(): void {
+      if (process.platform !== "darwin") {
+        console.error(
+          "iOS builds require macOS and Xcode."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const projectPath = process.cwd();
+      const iosPath = path.join(
+        projectPath,
+        "platforms",
+        "ios"
+      );
+
+      const xcodeProject = path.join(
+        iosPath,
+        "htmelMobileApp",
+        "htmelMobileApp.xcodeproj"
+      );
+
+      if (!fs.existsSync(xcodeProject)) {
+        console.error(
+          `Xcode project not found: ${xcodeProject}. Run htmel create ios first.`
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const run = (
+        command: string,
+        args: string[]
+      ): boolean => {
+        const result = spawnSync(command, args, {
+          cwd: iosPath,
+          stdio: "inherit",
+        });
+
+        if (result.error) {
+          console.error(result.error.message);
+          return false;
+        }
+
+        if (result.status !== 0) {
+          console.error(`${command} failed with exit code ${result.status}`);
+          return false;
+        }
+
+        return true;
+      };
+
+      console.log("Building iOS app...");
+
+      const derivedData = path.join(
+        iosPath,
+        "build"
+      );
+
+      if (!run("xcodebuild", [
+        "-project", xcodeProject,
+        "-scheme", "htmelMobileApp",
+        "-sdk", "iphonesimulator",
+        "-configuration", "Debug",
+        "-derivedDataPath", derivedData,
+        "build",
+      ])) {
+        process.exitCode = 1;
+        return;
+      }
+
+      const appPath = path.join(
+        derivedData,
+        "Build",
+        "Products",
+        "Debug-iphonesimulator",
+        "htmelMobileApp.app"
+      );
+
+      if (!fs.existsSync(appPath)) {
+        console.error(`Built iOS app not found: ${appPath}`);
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log("Opening iOS Simulator...");
+
+      if (!run("open", ["-a", "Simulator"])) {
+        process.exitCode = 1;
+        return;
+      }
+
+      // Install on a booted simulator.
+      if (!run("xcrun", [
+        "simctl", "install", "booted", appPath,
+      ])) {
+        console.error(
+          "Could not install on a booted simulator. Open Simulator and boot a device first."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log(
+        "iOS app installed. Use Simulator to launch the app."
+      );
+    }
+  });
+
 program.parse(process.argv);
