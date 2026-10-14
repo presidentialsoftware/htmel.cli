@@ -120,7 +120,7 @@ program
   .action(async (pageName: string) => { });
 
 program
-  .command("add android")
+  .command("add:android")
   .description("Add android support")
   .action(async () => {
     createAndroid();
@@ -237,8 +237,126 @@ program
   });
 
 program
-  .command("create ios")
+  .command("add:ios")
   .description("Add ios support")
-  .action(async () => { });
+  .action(async () => {
+    createIOS();
+
+    function createIOS(): void {
+      const projectPath = process.cwd();
+      const packagePath = path.join(projectPath, "package.json");
+
+      // Require an existing HTMEL project.
+      if (!fs.existsSync(packagePath)) {
+        console.error(
+          "No package.json found. Run this command inside an HTMEL project."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      // Accept either supported website location.
+      const htmlPath = [
+        path.join(projectPath, "index.html"),
+        path.join(projectPath, "public", "index.html"),
+      ].find((file) => fs.existsSync(file));
+
+      if (!htmlPath) {
+        console.error(
+          "Could not find index.html in the project root or public/."
+        );
+        process.exitCode = 1;
+        return;
+      }
+
+      const platformPath = path.join(
+        projectPath,
+        "platforms",
+        "ios"
+      );
+
+      if (fs.existsSync(platformPath)) {
+        console.error("iOS has already been added to this project.");
+        process.exitCode = 1;
+        return;
+      }
+
+      const tempPath = fs.mkdtempSync(
+        path.join(os.tmpdir(), "htmelmobile-")
+      );
+
+      try {
+        console.log("Downloading the HTMEL iOS template...");
+
+        const result = spawnSync(
+          "git",
+          [
+            "clone",
+            "--depth",
+            "1",
+            "https://github.com/presidentialsoftware/htmelmobile.git",
+            tempPath,
+          ],
+          { stdio: "inherit" }
+        );
+
+        if (result.error) {
+          throw result.error;
+        }
+
+        if (result.status !== 0) {
+          throw new Error(
+            "Could not clone the htmelmobile repository."
+          );
+        }
+
+        const templatePath = path.join(tempPath, "ios");
+
+        if (!fs.existsSync(templatePath)) {
+          throw new Error(
+            "The repository does not contain the expected ios/ directory."
+          );
+        }
+
+        fs.mkdirSync(path.dirname(platformPath), {
+          recursive: true,
+        });
+
+        fs.cpSync(templatePath, platformPath, {
+          recursive: true,
+          errorOnExist: true,
+        });
+
+        console.log("iOS template added successfully.");
+        console.log(`Project: ${projectPath}`);
+        console.log(`iOS files: ${platformPath}`);
+        console.log(`HTML source: ${htmlPath}`);
+        console.log(
+          "Next: configure the iOS WebView to load the project's built web assets."
+        );
+
+        console.log(
+          "Building and running the iOS app requires macOS and Xcode."
+        );
+      } catch (error) {
+        fs.rmSync(platformPath, {
+          recursive: true,
+          force: true,
+        });
+
+        console.error(
+          "Failed to create iOS:",
+          error instanceof Error ? error.message : error
+        );
+
+        process.exitCode = 1;
+      } finally {
+        fs.rmSync(tempPath, {
+          recursive: true,
+          force: true,
+        });
+      }
+    }
+  });
 
 program.parse(process.argv);

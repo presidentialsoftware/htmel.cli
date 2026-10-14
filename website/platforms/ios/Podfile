@@ -1,0 +1,12 @@
+platform :ios, '10.0' # Specify iOS version
+
+target 'htmelMobileApp' do
+  use_frameworks!
+  
+  # Specify the project path explicitly if CocoaPods fails to detect it
+  project 'htmelMobileApp.xcodeproj' # Make sure this path is correct for your project
+  
+  # Add dependencies
+  pod 'WebKit' # WebView support through WebKit
+  # Add other pods as necessary
+end
