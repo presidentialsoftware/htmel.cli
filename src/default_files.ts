@@ -294,7 +294,7 @@ export const packageJsonContent = (projectName: string) => `{
     "Node.js",
     "website"
   ],
-  "author": "Ashton James Snow Morris Jefferson",
+  "author": "Ashton Morris",
   "license": "MIT",
   "dependencies": {
     "htmel": "git+https://github.com/presidentialsoftware/htmel.git#dist"

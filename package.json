@@ -20,7 +20,7 @@
     "Node.js",
     "website"
   ],
-  "author": "Ashton Morris",
+  "author": "",
   "license": "MIT",
   "dependencies": {
     "commander": "^11.0.0"

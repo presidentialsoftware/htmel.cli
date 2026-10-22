@@ -955,4 +955,135 @@ program
     }
   });
 
+
+
+program
+  .command("add:desktop")
+  .description("Add TinyJS desktop support to the current HTMEL project")
+  .option("--force", "Overwrite existing desktop files")
+  .action((options: { force?: boolean }) => {
+    const projectDir = process.cwd();
+    const packagePath = path.join(projectDir, "package.json");
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "htmldesktop-")
+    );
+    const repoDir = path.join(tempDir, "repo");
+
+    if (!fs.existsSync(packagePath)) {
+      console.error(
+        "Error: No package.json found. Run this command inside an HTMEL project."
+      );
+      fs.rmSync(tempDir, { recursive: true, force: true });
+      process.exitCode = 1;
+      return;
+    }
+
+    try {
+      console.log("Downloading TinyJS desktop runtime...");
+
+      const clone = spawnSync(
+        "git",
+        [
+          "clone",
+          "--depth",
+          "1",
+          "--branch",
+          "main",
+          "https://github.com/presidentialsoftware/htmldesktop.git",
+          repoDir
+        ],
+        { stdio: "inherit" }
+      );
+
+      if (clone.error) {
+        throw clone.error;
+      }
+
+      if (clone.status !== 0) {
+        throw new Error(
+          "Could not download htmldesktop. Check your internet connection and Git installation."
+        );
+      }
+
+      const rootFiles = [
+        "compile-linux.sh",
+        "launch-linux.bash",
+        "htmldesktop.json",
+        "package-linux.js",
+        "package-debian.js",
+        "package-debian.readme.md"
+      ];
+
+      const directories = ["native", "runtime", "template"];
+
+      function copyItem(relativePath: string): void {
+        const source = path.join(repoDir, relativePath);
+        const destination = path.join(projectDir, relativePath);
+
+        if (!fs.existsSync(source)) {
+          console.warn(`Skipping missing repository item: ${relativePath}`);
+          return;
+        }
+
+        if (fs.existsSync(destination) && !options.force) {
+          console.log(`Keeping existing: ${relativePath}`);
+          return;
+        }
+
+        fs.cpSync(source, destination, {
+          recursive: true,
+          force: true
+        });
+
+        console.log(`Copied: ${relativePath}`);
+      }
+
+      for (const file of rootFiles) {
+        copyItem(file);
+      }
+
+      for (const directory of directories) {
+        copyItem(directory);
+      }
+
+      const packageJson = JSON.parse(
+        fs.readFileSync(packagePath, "utf8")
+      );
+
+      packageJson.scripts ??= {};
+
+      const desktopScripts: Record<string, string> = {
+        "desktop:build-linux": "bash compile-linux.sh",
+        "desktop:run-linux": "bash launch-linux.bash",
+        "desktop:package-linux": "node package-linux.js",
+        "desktop:package:debian": "node package-debian.js"
+      };
+
+      for (const [name, command] of Object.entries(desktopScripts)) {
+        if (options.force || !packageJson.scripts[name]) {
+          packageJson.scripts[name] = command;
+        }
+      }
+
+      fs.writeFileSync(
+        packagePath,
+        JSON.stringify(packageJson, null, 2) + "\n"
+      );
+
+      console.log("\nTinyJS desktop support added.");
+      console.log("Next steps:");
+      console.log("  npm run desktop:build");
+      console.log("  npm run desktop:package");
+    } catch (error) {
+      console.error(
+        "Failed to add desktop support:",
+        error instanceof Error ? error.message : error
+      );
+      process.exitCode = 1;
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+
 program.parse(process.argv);
