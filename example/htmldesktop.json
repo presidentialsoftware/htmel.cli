@@ -1,9 +1,0 @@
-{
-    "name": "Flashcards",
-    "title": "Flashcards",
-    "version": "0.1.0",
-    "width": 900,
-    "height": 600,
-    "entry": "template/index.html",
-    "icon": "template/icon.png"
-}

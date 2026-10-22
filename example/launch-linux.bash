@@ -1,1 +1,0 @@
-./htmldesktop "$(realpath template/index.html)"
