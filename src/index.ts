@@ -959,7 +959,7 @@ program
 
 program
   .command("add:desktop")
-  .description("Add TinyJS desktop support to the current HTMEL project")
+  .description("Add HTML Desktop desktop support to the current HTMEL project")
   .option("--force", "Overwrite existing desktop files")
   .action((options: { force?: boolean }) => {
     const projectDir = process.cwd();
@@ -979,7 +979,7 @@ program
     }
 
     try {
-      console.log("Downloading TinyJS desktop runtime...");
+      console.log("Downloading HTML Desktop desktop runtime...");
 
       const clone = spawnSync(
         "git",
@@ -1070,7 +1070,7 @@ program
         JSON.stringify(packageJson, null, 2) + "\n"
       );
 
-      console.log("\nTinyJS desktop support added.");
+      console.log("\nHTML Desktop desktop support added.");
       console.log("Next steps:");
       console.log("  npm run desktop:build");
       console.log("  npm run desktop:package");

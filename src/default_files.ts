@@ -126,37 +126,71 @@ export const maincss = `li {
     background-color: yellow;
 }`;
 
+
 export const compilesh = `#!/bin/bash
+set -e
 
-# Directory containing JavaScript files
+# Directory containing public files
 js_dir="./public"
+components_dir="./components"
+public_components_dir="./public/components"
 
-# Check if the directory exists
+# Check if the public directory exists
 if [ ! -d "$js_dir" ]; then
     echo "Error: Directory '$js_dir' not found."
     exit 1
 fi
 
+# Compile TypeScript
 tsc
 echo "TypeScript components compiled."
 
-find "$js_dir" -type f -name "*.js" -exec mv {} ./public/ \\;
+# Flatten generated JavaScript files into public/
+find "$js_dir" -mindepth 2 -type f -name "*.js" -exec mv -f {} "$js_dir/" \\;
 
-find "$js_dir" -type d -empty -delete
+# Remove empty directories
+find "$js_dir" -mindepth 1 -type d -empty -delete
 
 echo "Build and flattening complete!"
 
-rm ./public/main.js
+# Remove the generated main.js before transpilation
+rm -f "$js_dir/main.js"
 
+# Transpile JavaScript
 npm run transpile
-echo "JavaScript files transpiled to public"
+echo "JavaScript files transpiled to public."
 
-# Delete JavaScript files
-echo "Deleting JavaScript files from $js_dir ..."
-find "$js_dir" -type f -name '*.js' ! -name 'main.js' -delete
+# Remove generated JavaScript files from public/components/
+if [ -d "$public_components_dir" ]; then
+    find "$public_components_dir" -type f -name "*.js" -delete
+fi
 
-echo "JavaScript files deleted successfully."
+# Copy CSS files from components/ to public/components/
+if [ -d "$components_dir" ]; then
+    find "$components_dir" -type f -name "*.css" -print0 |
+    while IFS= read -r -d '' css_file; do
+        relative_path="\${css_file#./components/}"
+        destination="$public_components_dir/$relative_path"
+
+        mkdir -p "$(dirname "$destination")"
+        cp -f "$css_file" "$destination"
+
+        echo "Copied CSS: $destination"
+    done
+fi
+
+# Delete intermediate JavaScript files, preserving public/main.js
+echo "Cleaning intermediate JavaScript files..."
+find "$js_dir" -type f -name "*.js" ! -path "$js_dir/main.js" -delete
+
+# Final safeguard: no JavaScript files in public/components/
+if [ -d "$public_components_dir" ]; then
+    find "$public_components_dir" -type f -name "*.js" -delete
+fi
+
+echo "Build completed successfully."
 `;
+
 
 export const webpackConfig = `const path = require("path");
 const glob = require("glob");
